@@ -10,13 +10,16 @@
 
 RCT_EXPORT_MODULE()
 
-RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)filename
+RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFileName
                  toPath:(NSString*)outputPath
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject
                 )
 {
-    NSURL *urlFile = [NSURL fileURLWithPath:filename];
+//    NSString * fileName =
+    NSLog(@"rootFileName %@", rootFileName);
+    NSLog(@"outputPath %@", outputPath);
+    NSURL *urlFile = [NSURL fileURLWithPath:rootFileName];
     AVURLAsset *avAsset = [AVURLAsset URLAssetWithURL:urlFile options:nil];
 
     NSArray *compatiblePresets = [AVAssetExportSession exportPresetsCompatibleWithAsset:avAsset];
