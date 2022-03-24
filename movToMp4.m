@@ -6,27 +6,55 @@
 #import <MobileCoreServices/MobileCoreServices.h>
 #import <AssetsLibrary/AssetsLibrary.h>
 
+@interface movToMp4()
+@end
 @implementation movToMp4
 
 RCT_EXPORT_MODULE()
 
-RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFileName
-                 toPath:(NSString*)outputPath
+RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFilePath
+                  rootFileName:(NSString*)rootFileName
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject
                 )
 {
-//    NSString * fileName =
-    NSLog(@"rootFileName %@", rootFileName);
-    NSLog(@"outputPath %@", outputPath);
-    NSURL *urlFile = [NSURL fileURLWithPath:rootFileName];
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      
+      
+        [self onConvertVideo:rootFilePath rootFileName:rootFileName resolver:resolve rejecter: reject];
+  });
+}
+
+-(void) onConvertVideo: (NSString*)rootFilePath
+          rootFileName:(NSString*)rootFileName
+                resolver:(RCTPromiseResolveBlock)resolve
+              rejecter:(RCTPromiseRejectBlock)reject
+{
+    NSString * filePath;
+    NSString * fileName = rootFileName;
+    
+    if ([rootFilePath containsString:@"file://"]) {
+          filePath = [rootFilePath stringByReplacingOccurrencesOfString:@"file://"
+                                                    withString:@""];
+    } else {
+        filePath = rootFilePath;
+    }
+    
+    if ([[rootFileName uppercaseString] containsString:@".MOV"]) {
+        fileName = [rootFileName stringByReplacingOccurrencesOfString:@".MOV"
+                                                    withString:@""];
+    } else {
+        filePath = rootFileName;
+    }
+    
+    NSURL *urlFile = [NSURL fileURLWithPath:filePath];
     AVURLAsset *avAsset = [AVURLAsset URLAssetWithURL:urlFile options:nil];
 
     NSArray *compatiblePresets = [AVAssetExportSession exportPresetsCompatibleWithAsset:avAsset];
 
     AVAssetExportSession *exportSession = [[AVAssetExportSession alloc] initWithAsset:avAsset presetName:AVAssetExportPresetMediumQuality];
 
-    NSString * resultPath = [NSHomeDirectory() stringByAppendingFormat:@"/Documents/%@.mp4", outputPath];
+    NSString * resultPath = [NSHomeDirectory() stringByAppendingFormat:@"/Documents/%@.mp4", fileName];
 
     exportSession.outputURL = [NSURL fileURLWithPath:resultPath];
 
@@ -40,6 +68,7 @@ RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFileName
             case AVAssetExportSessionStatusFailed: {
                 NSError* error = exportSession.error;
                 NSString *codeWithDomain = [NSString stringWithFormat:@"E%@%zd", error.domain.uppercaseString, error.code];
+                
                 reject(codeWithDomain, error.localizedDescription, error);
                 break;
             }
@@ -50,15 +79,47 @@ RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFileName
             {
                 //Video conversion finished
                 //NSLog(@"Successful!");
-                resolve(resultPath);
+                NSString *resultFileName = [NSString stringWithFormat:@"%@.mp4", fileName];
+                NSDictionary *result =@{ @"resultPath": resultPath, @"fileName": resultFileName };
+                resolve(result);
             }
                 break;
             default:
                 break;
         }
     }];
+}
 
+RCT_EXPORT_METHOD(removeConvertedVideo: (NSString*)rootFileName
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject
+                )
+{
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      
+      
+        [self onRemoveVideo:rootFileName resolver:resolve rejecter: reject];
+  });
+}
 
+-(void) onRemoveVideo: (NSString*)convertedFileName
+               resolver:(RCTPromiseResolveBlock)resolve
+             rejecter:(RCTPromiseRejectBlock)reject {
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+     NSString *documentsPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+
+     NSString *filePath = [documentsPath stringByAppendingPathComponent:convertedFileName];
+     NSError *error;
+     BOOL success = [fileManager removeItemAtPath:filePath error:&error];
+     if (success) {
+         resolve(@"Successfully removed");
+     }
+     else
+     {
+         NSString *codeWithDomain = [NSString stringWithFormat:@"E%@%zd", error.domain.uppercaseString, error.code];
+         reject(codeWithDomain, error.localizedDescription, error);
+     }
 }
 
 @end
