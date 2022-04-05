@@ -25,11 +25,34 @@ RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFilePath
   });
 }
 
+- (NSString*) getTmpDirectory {
+    NSString *TMP_DIRECTORY = @"OneStudyTemp/";
+    NSString *tmpFullPath = [NSTemporaryDirectory() stringByAppendingString:TMP_DIRECTORY];
+    
+    BOOL isDir;
+    BOOL exists = [[NSFileManager defaultManager] fileExistsAtPath:tmpFullPath isDirectory:&isDir];
+    if (!exists) {
+        [[NSFileManager defaultManager] createDirectoryAtPath: tmpFullPath
+                                  withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    
+    return tmpFullPath;
+}
+
 -(void) onConvertVideo: (NSString*)rootFilePath
           rootFileName:(NSString*)rootFileName
                 resolver:(RCTPromiseResolveBlock)resolve
               rejecter:(RCTPromiseRejectBlock)reject
 {
+    NSString * directory = [self getTmpDirectory];
+    
+    NSFileManager *fileManager= [NSFileManager defaultManager];
+    NSError *error = nil;
+    if(![fileManager createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:&error]) {
+         // An error has occurred, do something to handle it
+         NSLog(@"Failed to create directory \"%@\". Error: %@", directory, error);
+    }
+    
     NSString * filePath;
     NSString * fileName = rootFileName;
     
@@ -54,9 +77,10 @@ RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFilePath
 
     AVAssetExportSession *exportSession = [[AVAssetExportSession alloc] initWithAsset:avAsset presetName:AVAssetExportPresetMediumQuality];
 
-    NSString * resultPath = [NSHomeDirectory() stringByAppendingFormat:@"/Documents/%@.mp4", fileName];
+    NSString *tempFilePath = [directory stringByAppendingFormat:@"%@.mp4", fileName];
+//    NSString * resultPath = [NSHomeDirectory() stringByAppendingFormat:@"/Documents/OneStudyTemp/%@.mp4", fileName];
 
-    exportSession.outputURL = [NSURL fileURLWithPath:resultPath];
+    exportSession.outputURL = [NSURL fileURLWithPath:tempFilePath];
 
     //set the output file format if you want to make it in other file format (ex .3gp)
     exportSession.outputFileType = AVFileTypeMPEG4;
@@ -80,7 +104,7 @@ RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFilePath
                 //Video conversion finished
                 //NSLog(@"Successful!");
                 NSString *resultFileName = [NSString stringWithFormat:@"%@.mp4", fileName];
-                NSDictionary *result =@{ @"resultPath": resultPath, @"fileName": resultFileName };
+                NSDictionary *result =@{ @"resultPath": tempFilePath, @"fileName": resultFileName };
                 resolve(result);
             }
                 break;
@@ -122,4 +146,34 @@ RCT_EXPORT_METHOD(removeConvertedVideo: (NSString*)rootFileName
      }
 }
 
+RCT_EXPORT_METHOD(checkDirectionExist: (RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject
+                )
+{
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      
+      
+        [self onCheckExist:resolve rejecter: reject];
+  });
+}
+//checkExist
+-(void) onCheckExist:(RCTPromiseResolveBlock)resolve
+          rejecter:(RCTPromiseRejectBlock)reject {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString * pathForFile = [NSTemporaryDirectory() stringByAppendingFormat:@"OneStudyTemp/"];
+   
+    if ([fileManager fileExistsAtPath:pathForFile]){
+        NSError *error;
+        BOOL success = [fileManager removeItemAtPath:pathForFile error:&error];
+        if (success) {
+            resolve(@{@"oldPath": pathForFile,  @"code": @"EXIST", @"message": @"Directory deleted"});
+        } else {
+            NSString *codeWithDomain = [NSString stringWithFormat:@"E%@%zd", error.domain.uppercaseString, error.code];
+            reject(codeWithDomain, error.localizedDescription, error);
+        }
+    } else {
+        resolve(@{@"path": pathForFile, @"code": @"NOT_EXIST", @"message": @"Directory not exist"});
+    }
+
+}
 @end
