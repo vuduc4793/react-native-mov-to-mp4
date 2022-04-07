@@ -63,11 +63,13 @@ RCT_EXPORT_METHOD(convertMovToMp4: (NSString*)rootFilePath
         filePath = rootFilePath;
     }
     
+    
     if ([[rootFileName uppercaseString] containsString:@".MOV"]) {
-        fileName = [rootFileName stringByReplacingOccurrencesOfString:@".MOV"
+        fileName = [[rootFileName uppercaseString] stringByReplacingOccurrencesOfString:@".MOV"
                                                     withString:@""];
+        
     } else {
-        filePath = rootFileName;
+        fileName = rootFileName;
     }
     
     NSURL *urlFile = [NSURL fileURLWithPath:filePath];
