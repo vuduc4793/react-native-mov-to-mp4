@@ -4,14 +4,14 @@
  * @providesModule movToMp4
  * @flow
  */
-'use strict';
+"use strict";
 
-var warning = require('fbjs/lib/warning');
+var warning = require("fbjs/lib/warning");
 
 var movToMp4 = {
-  test: function() {
-    warning('Not yet implemented for Android.');
-  }
+  test: function () {
+    warning("Not yet implemented for Android.");
+  },
 };
 
 export default movToMp4;
